@@ -43,8 +43,12 @@ DEFAULT_MODEL = "gemini-3.7-flash"
 DEFAULT_LOCATION = "global"
 DEFAULT_PROJECT = "sandboxa1"
 
-# One shot, then fall back. A name match is worth ~8s of the customer's time.
-REQUEST_TIMEOUT_MS = 8_000
+# One shot, then fall back. Measured live, gemini-3.7-flash spends several
+# hundred thinking tokens on a two-name comparison and an 8s budget blew the
+# deadline about half the time — falling back to the very score the model was
+# added to improve. 20s keeps the fallback a safety net rather than the common
+# path, and still leaves headroom under Cloud Run's 120s request timeout.
+REQUEST_TIMEOUT_MS = 20_000
 
 # How far above the deterministic baseline the model is allowed to lift a score.
 # A model arguing "R. K. Sharma" is "Rajesh Kumar Sharma" is doing its job; a
@@ -52,7 +56,13 @@ REQUEST_TIMEOUT_MS = 8_000
 # unrelated names or been talked into it by the input, and in KYC a false accept
 # is far more expensive than a false reject. The reasoning is still kept so a
 # reviewer can see the argument that was made and overrule it by hand.
-MAX_MODEL_UPGRADE = 0.25
+#
+# 0.35 is calibrated on the case the model exists for: a single transliterated
+# given name ("Laxmi"/"Lakshmi") scores ~0.53 deterministically, so 0.35 of
+# headroom clears the 0.85 verification threshold. Two transliterated tokens
+# score lower (~0.43) and still land in the referral band, which is the right
+# outcome — the weaker the offline evidence, the less the model may add.
+MAX_MODEL_UPGRADE = 0.35
 CLAMP_FACTOR = "model_score_clamped_to_baseline_margin"
 
 # Distinct per failure class so ops can tell a credentials problem from a

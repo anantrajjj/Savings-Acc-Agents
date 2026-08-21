@@ -376,3 +376,22 @@ def test_adjudicate_never_raises_for_a_hostile_client() -> None:
 
     assert result.source == "deterministic_fallback"
     assert result.fallback_reason == FALLBACK_API_ERROR
+
+
+def test_clamp_margin_still_clears_the_single_transliteration_case() -> None:
+    """Locks in the calibration the clamp margin was chosen for.
+
+    A single transliterated given name ("Laxmi" vs "Lakshmi") scores ~0.53
+    offline; the margin must leave enough headroom for the model to carry that
+    over the verification threshold, or the clamp defeats the one case the
+    model was added to handle. Two transliterated tokens (~0.43) must still
+    fall short — the weaker the offline evidence, the less the model may add.
+    """
+    from savings_flow.agents.a01_id_verification.contract import VERIFIED_THRESHOLD
+    from savings_flow.agents.a01_id_verification.matching import score_names
+
+    single = score_names("Laxmi Narayanan", "Lakshmi Narayanan").score
+    assert single + MAX_MODEL_UPGRADE >= VERIFIED_THRESHOLD
+
+    double = score_names("Muhammad Ilias Qureshi", "Mohammed Ilyas Qureshi").score
+    assert double + MAX_MODEL_UPGRADE < VERIFIED_THRESHOLD
