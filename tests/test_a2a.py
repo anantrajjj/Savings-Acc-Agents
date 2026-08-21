@@ -692,3 +692,28 @@ def test_health_endpoints_still_answer(client: TestClient, agent: StubAgent) -> 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
     assert agent.calls == []
+
+
+def test_card_advertises_https_behind_cloud_runs_proxy() -> None:
+    """Cloud Run forwards plain HTTP to the container, so the scheme the app
+    observes is not the scheme callers must use. An http:// URL in the card
+    would send other agents to an address Cloud Run does not serve."""
+    client = TestClient(create_app(agent=StubAgent()), base_url="http://a01.example.run.app")
+    card = client.get("/.well-known/agent-card.json").json()
+    for interface in card["supportedInterfaces"]:
+        assert interface["url"].startswith("https://"), interface
+
+    forwarded = client.get(
+        "/.well-known/agent-card.json", headers={"X-Forwarded-Proto": "https"}
+    ).json()
+    assert forwarded["supportedInterfaces"][0]["url"].startswith("https://")
+
+    v03 = client.get("/.well-known/agent-card.json", params={"dialect": "0.3"}).json()
+    assert v03["url"].startswith("https://")
+
+
+def test_local_development_keeps_http() -> None:
+    """Forcing https unconditionally would make the card useless on a laptop."""
+    client = TestClient(create_app(agent=StubAgent()), base_url="http://localhost:8080")
+    card = client.get("/.well-known/agent-card.json").json()
+    assert card["supportedInterfaces"][0]["url"].startswith("http://localhost")

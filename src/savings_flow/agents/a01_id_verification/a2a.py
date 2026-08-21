@@ -784,8 +784,22 @@ def _sse(payload: Mapping[str, Any]) -> bytes:
 
 
 def base_url_for(request: Request) -> str:
-    """Public base URL of this deployment, for the card's endpoint."""
-    return str(request.base_url).rstrip("/")
+    """Public base URL of this deployment, for the card's endpoint.
+
+    Cloud Run terminates TLS at its front end and forwards plain HTTP to the
+    container, so `request.base_url` reports `http://` for a request the caller
+    made over `https://`. An `http://` URL in the agent card is not cosmetic —
+    it is the address other agents are told to call, and Cloud Run does not
+    serve it. Trust `X-Forwarded-Proto` when the proxy sets it, and otherwise
+    only allow `http` for local development hosts.
+    """
+    base = str(request.base_url).rstrip("/")
+    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+    scheme = forwarded or request.url.scheme
+    host = request.url.hostname or ""
+    if scheme != "https" and host not in {"localhost", "127.0.0.1", "testserver", "::1"}:
+        scheme = "https"
+    return f"{scheme}://{base.split('://', 1)[-1]}"
 
 
 def add_a2a_routes(
