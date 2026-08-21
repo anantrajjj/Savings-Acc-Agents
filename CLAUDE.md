@@ -45,6 +45,26 @@ this initial set) and must NOT appear in the agent's name.
 
 ## Status
 
-Environment scaffolded (`uv init`, `google-adk`, `pytest` +
-`pytest-asyncio` as dev deps). No agent code written yet — agent
-implementation is pending explicit go-ahead per agent/batch.
+**A01 — ID Verification Agent: built.** Deterministic PAN + registry checks
+with a single Gemini 3.7 Flash call adjudicating the name match only; mocked
+PAN registry behind a Protocol; Cloud Run FastAPI mirroring the Agent Engine
+`:query` envelope; 207 tests passing without credentials or network. See
+`docs/agents/a01-id-verification.md`. Not yet deployed — awaiting `gcloud`
+authentication for project `sandboxa1`.
+
+Remaining agents (A02, A03, A04, A20, A05, A24) are not started; each awaits
+explicit go-ahead.
+
+### Decisions carried forward to the other agents
+
+- **Model**: `gemini-3.7-flash` on the `global` endpoint. It has no regional
+  data residency; `gemini-3.5-flash` in `asia-south1` is the in-region
+  alternative. Chosen deliberately — revisit per agent if an agent handles more
+  sensitive payloads than PAN plus name.
+- **Contract discipline**: the LLM never authors the response envelope. It
+  returns a narrow structured judgement under a response schema; deterministic
+  code composes every field the platform validates, and the entrypoint never
+  raises.
+- **Shared modules**: `savings_flow.common` holds the `:query` envelope models,
+  PAN validation, and the policy-citation catalog (stable IDs, `ids_for_agent`
+  mapping) that every agent's `explain` block cites from.

@@ -79,6 +79,7 @@ FACTORS = frozenset(
         "case_or_punctuation_only",  # differ only in case/punctuation/spacing
         "token_order_differs",  # same tokens, different word order
         "initials_expanded",  # an initial matched a full token (R -> RAJESH)
+        "spelling_variant_matched",  # tokens matched on near-identical spelling
         "initial_mismatch",  # an initial matched nothing on the other side
         "honorific_stripped",  # a title was removed from at least one side
         "diacritics_folded",  # non-ASCII letters folded on at least one side
@@ -165,9 +166,7 @@ def score_names(input_name: str, registered_name: str) -> MatchResult:
     """
     normalized_input = normalize_name(input_name)
     normalized_registered = normalize_name(registered_name)
-    provenance = _provenance_factors(
-        input_name, registered_name, normalized_input, normalized_registered
-    )
+    provenance = _provenance_factors(input_name, registered_name)
 
     input_tokens = tokenize_name(input_name)
     registered_tokens = tokenize_name(registered_name)
@@ -270,14 +269,8 @@ def _strip_honorifics(tokens: list[str]) -> list[str]:
     return kept
 
 
-def _provenance_factors(
-    raw_input: str,
-    raw_registered: str,
-    normalized_input: str,
-    normalized_registered: str,
-) -> list[str]:
+def _provenance_factors(raw_input: str, raw_registered: str) -> list[str]:
     """Factors describing what normalization changed, on either side."""
-    del normalized_input, normalized_registered  # derived below from the raws
     raws = [raw for raw in (raw_input, raw_registered) if isinstance(raw, str)]
     factors: list[str] = []
     if any(any(ord(ch) > 127 for ch in raw) for raw in raws):
@@ -417,6 +410,10 @@ def _explain(
         factors.append("token_order_differs")
     if any(is_initial for _, _, _, is_initial in pairs):
         factors.append("initials_expanded")
+    if any(
+        not is_initial and weight < 1.0 for _, _, weight, is_initial in pairs
+    ):
+        factors.append("spelling_variant_matched")
     if any(len(input_tokens[i]) == 1 for i in unmatched_input) or any(
         len(registered_tokens[j]) == 1 for j in unmatched_registered
     ):

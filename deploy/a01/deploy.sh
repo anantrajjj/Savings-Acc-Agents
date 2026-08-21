@@ -95,5 +95,9 @@ Register ${SERVICE_URL}/query with the Gemini Enterprise app. Smoke test:
   curl -sS -X POST "${SERVICE_URL}/query" \\
     -H "Authorization: Bearer \$(${GCLOUD} auth print-identity-token)" \\
     -H "Content-Type: application/json" \\
-    -d '{"class_method":"query","input":{"input":{"pan":"ABCPE1234F","fullName":"Rajesh Kumar Sharma"}}}'
+    -d '{"class_method":"query","input":{"input":{"pan":"ZZBPS1002B","fullName":"R. K. Sharma"}}}'
+
+The PAN above is a fixture in the mocked registry (registered as
+"Rajesh Kumar Sharma"), so it exercises the initials-vs-expanded name match
+rather than returning pan_not_found_in_registry.
 INFO
