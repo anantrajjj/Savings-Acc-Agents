@@ -66,7 +66,9 @@ answers both. The platform stores a card snapshot, so card changes need
 `agents-cli publish` re-run. Untested: a real routed query from the assistant.
 
 Remaining agents (A02, A03, A04, A20, A05, A24) are not started; each awaits
-explicit go-ahead.
+explicit go-ahead. **Read `docs/learnings.md` before starting one** — it records
+the errors, GCP setup order, model behaviour, Cloud Run and A2A findings from
+A01, and ends with a checklist.
 
 ### Decisions carried forward to the other agents
 
