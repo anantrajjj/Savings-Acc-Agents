@@ -13,6 +13,12 @@
 #   gcloud auth login
 #   gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
 #       artifactregistry.googleapis.com --project=sandboxa1
+#   gcloud iam service-accounts create a01-id-verification \
+#       --display-name="A01 ID Verification Agent (Cloud Run runtime)" \
+#       --project=sandboxa1
+#   gcloud projects add-iam-policy-binding sandboxa1 \
+#       --member="serviceAccount:a01-id-verification@sandboxa1.iam.gserviceaccount.com" \
+#       --role="roles/aiplatform.user"
 #
 set -euo pipefail
 
@@ -34,6 +40,12 @@ MAX_INSTANCES="${MAX_INSTANCES:-4}"
 # queueing behind its own first call.
 CONCURRENCY="${CONCURRENCY:-8}"
 REQUEST_TIMEOUT="${REQUEST_TIMEOUT:-120}"
+
+# Dedicated runtime identity, least privilege: it needs roles/aiplatform.user
+# and nothing else. Create it and grant the role before the first deploy (see
+# the IAM prerequisites above). Set RUNTIME_SA="" to fall back to the project's
+# default compute service account.
+RUNTIME_SA="${RUNTIME_SA:-a01-id-verification@${PROJECT_ID}.iam.gserviceaccount.com}"
 
 GCLOUD="${GCLOUD:-gcloud}"
 
@@ -70,6 +82,7 @@ echo "Deploying ${SERVICE} to ${PROJECT_ID}/${REGION} (model ${A01_MODEL})..."
   --timeout="${REQUEST_TIMEOUT}" \
   --ingress=all \
   --no-allow-unauthenticated \
+  ${RUNTIME_SA:+--service-account="${RUNTIME_SA}"} \
   --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION},A01_MODEL=${A01_MODEL}" \
   --startup-probe="httpGet.path=/healthz,httpGet.port=${CONTAINER_PORT},periodSeconds=5,timeoutSeconds=5,failureThreshold=12" \
   --liveness-probe="httpGet.path=/healthz,httpGet.port=${CONTAINER_PORT},periodSeconds=30,timeoutSeconds=5,failureThreshold=3" \
@@ -89,6 +102,14 @@ cat <<INFO
 Deployed: ${SERVICE}
   Query endpoint : ${SERVICE_URL}/query
   Health check   : ${SERVICE_URL}/healthz
+
+The service is deployed with --no-allow-unauthenticated, so every caller needs
+roles/run.invoker on it. Grant it to the Gemini Enterprise caller identity, and
+to yourself for the smoke test below:
+
+  ${GCLOUD} run services add-iam-policy-binding ${SERVICE} \
+    --project=${PROJECT_ID} --region=${REGION} \
+    --member="user:YOUR_EMAIL" --role="roles/run.invoker"
 
 Register ${SERVICE_URL}/query with the Gemini Enterprise app. Smoke test:
 
