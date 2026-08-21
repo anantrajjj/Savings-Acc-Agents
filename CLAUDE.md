@@ -48,9 +48,15 @@ this initial set) and must NOT appear in the agent's name.
 **A01 — ID Verification Agent: built.** Deterministic PAN + registry checks
 with a single Gemini 3.7 Flash call adjudicating the name match only; mocked
 PAN registry behind a Protocol; Cloud Run FastAPI mirroring the Agent Engine
-`:query` envelope; 207 tests passing without credentials or network. See
-`docs/agents/a01-id-verification.md`. Not yet deployed — awaiting `gcloud`
-authentication for project `sandboxa1`.
+`:query` envelope; 247 tests passing without credentials or network. See
+`docs/agents/a01-id-verification.md`.
+
+**Deployed and verified live** on Cloud Run in `asia-south1`
+(`a01-id-verification`, runtime SA `a01-id-verification@sandboxa1`), calling
+`gemini-3.7-flash` on the global endpoint through ADC. `POST /query` returns
+the contract shape via the model path; `GET /status` is the externally
+reachable health endpoint. Remaining step: register the `/query` URL in the
+Gemini Enterprise app and grant `roles/run.invoker` to its caller identity.
 
 Remaining agents (A02, A03, A04, A20, A05, A24) are not started; each awaits
 explicit go-ahead.
