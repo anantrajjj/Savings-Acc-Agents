@@ -17,6 +17,13 @@ from typing import Any, Protocol, cast
 
 from fastapi import FastAPI, HTTPException
 
+from savings_flow.agents.a01_id_verification.a2a import (
+    Clock,
+    IdFactory,
+    add_a2a_routes,
+)
+from savings_flow.agents.a01_id_verification.a2a import _utc_now as a2a_default_clock
+from savings_flow.agents.a01_id_verification.a2a import _uuid_id as a2a_default_id
 from savings_flow.common.envelope import QueryRequest, QueryResponse
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,8 +84,17 @@ class _AgentSlot:
         return cast("_AgentLike", self._agent)
 
 
-def create_app(agent: object | None = None) -> FastAPI:
-    """Build the ASGI app, optionally against an injected agent (tests)."""
+def create_app(
+    agent: object | None = None,
+    *,
+    a2a_new_id: IdFactory = a2a_default_id,
+    a2a_now: Clock = a2a_default_clock,
+) -> FastAPI:
+    """Build the ASGI app, optionally against an injected agent (tests).
+
+    `a2a_new_id` / `a2a_now` exist so a test can assert the exact ids and
+    timestamps in an A2A payload; production always takes the defaults.
+    """
     slot = _AgentSlot(cast("_AgentLike | None", agent), _build_agent)
 
     @asynccontextmanager
@@ -128,6 +144,12 @@ def create_app(agent: object | None = None) -> FastAPI:
         # external caller cannot use it to check the service; probes reach the
         # container directly and are unaffected.
         return {"status": "ok"}
+
+    # Second, additive protocol surface: Gemini Enterprise can register this
+    # service as a "Custom agent via A2A" instead of (not as well as) driving
+    # `/query`. It resolves the agent through the same slot, so both surfaces
+    # share one set-up agent instance.
+    add_a2a_routes(app, slot.get, new_id=a2a_new_id, now=a2a_now)
 
     return app
 
