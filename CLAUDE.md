@@ -55,8 +55,15 @@ PAN registry behind a Protocol; Cloud Run FastAPI mirroring the Agent Engine
 (`a01-id-verification`, runtime SA `a01-id-verification@sandboxa1`), calling
 `gemini-3.7-flash` on the global endpoint through ADC. `POST /query` returns
 the contract shape via the model path; `GET /status` is the externally
-reachable health endpoint. Remaining step: register the `/query` URL in the
-Gemini Enterprise app and grant `roles/run.invoker` to its caller identity.
+reachable health endpoint.
+
+**Registered in Gemini Enterprise** as a custom A2A agent (`ENABLED`). The
+service serves three surfaces: `/query` (the platform `:query` envelope),
+`/a2a` (JSON-RPC, A2A v1.0 and v0.3 dialects on one endpoint), and
+`/.well-known/agent-card.json`. Note the registration API only accepts the
+**v0.3** card shape today, so the card URL carries `?dialect=0.3`; the runtime
+answers both. The platform stores a card snapshot, so card changes need
+`agents-cli publish` re-run. Untested: a real routed query from the assistant.
 
 Remaining agents (A02, A03, A04, A20, A05, A24) are not started; each awaits
 explicit go-ahead.

@@ -253,3 +253,33 @@ deterministic score and records `model_unavailable_deterministic_score_used` in
   `Lakshmi` scores ~0.53 offline. That gap is precisely what the model call is
   there to close, so a live smoke test against Gemini is worth running before
   anyone judges match quality.
+
+## Registered with Gemini Enterprise
+
+Registered as a **custom A2A agent** on the app
+`gemini-enterprise-17872941_1787294139191`, agent id `18067469415698243285`,
+state `ENABLED`:
+
+```sh
+agents-cli publish gemini-enterprise \
+  --agent-card-url "https://<service-url>/.well-known/agent-card.json?dialect=0.3" \
+  --gemini-enterprise-app-id projects/378068182070/locations/global/collections/default_collection/engines/gemini-enterprise-17872941_1787294139191 \
+  --deployment-target cloud_run --display-name "ID Verification Agent" --project sandboxa1
+```
+
+Two findings from doing it, both measured rather than assumed:
+
+- **The registration API requires the v0.3 card shape.** Posting the v1.0 card
+  (endpoints under `supportedInterfaces`) is rejected with
+  `400 INVALID_ARGUMENT: required property 'protocolVersion' not found in
+  object`. Hence `?dialect=0.3` on the card URL. The runtime still answers both
+  dialects, so a v1.0 caller works even though the registration is described in
+  v0.3 terms.
+- **The platform stores a snapshot of the card**, not a live reference — the
+  registration holds `a2aAgentDefinition.jsonAgentCard`. Changing the served
+  card therefore has no effect until `agents-cli publish` is re-run, which
+  updates the existing registration in place rather than duplicating it.
+
+Gemini Enterprise calls the service as the Discovery Engine service agent, which
+needs `roles/run.servicesInvoker` on the Cloud Run service:
+`service-<PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com`.
