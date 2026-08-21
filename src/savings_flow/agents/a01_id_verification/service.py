@@ -121,6 +121,14 @@ def create_app(agent: object | None = None) -> FastAPI:
         # agent touched — it answers whether the process is serving, nothing more.
         return {"status": "ok"}
 
+    @app.get("/status")
+    def status() -> dict[str, str]:
+        # Same answer as /healthz, reachable from outside. Cloud Run's front end
+        # intercepts /healthz on the public URL and returns its own 404, so an
+        # external caller cannot use it to check the service; probes reach the
+        # container directly and are unaffected.
+        return {"status": "ok"}
+
     return app
 
 

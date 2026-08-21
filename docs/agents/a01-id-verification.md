@@ -93,7 +93,11 @@ POST https://<service-url>/query
 → {"output": {…agent output…}}
 ```
 
-`GET /healthz` serves Cloud Run probes without credentials or a model call.
+`GET /healthz` serves Cloud Run's startup and liveness probes without
+credentials or a model call. Cloud Run's front end intercepts `/healthz` on the
+public URL and answers its own 404, so external callers and uptime checks
+should use `GET /status`, which returns the same payload. Probes reach the
+container directly and are unaffected.
 
 ## Configuration
 

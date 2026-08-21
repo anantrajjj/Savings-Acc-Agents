@@ -101,7 +101,9 @@ cat <<INFO
 
 Deployed: ${SERVICE}
   Query endpoint : ${SERVICE_URL}/query
-  Health check   : ${SERVICE_URL}/healthz
+  Health check   : ${SERVICE_URL}/status
+                   (/healthz backs the Cloud Run probes, but the front end
+                    intercepts it on the public URL and returns its own 404)
 
 The service is deployed with --no-allow-unauthenticated, so every caller needs
 roles/run.invoker on it. Grant it to the Gemini Enterprise caller identity, and

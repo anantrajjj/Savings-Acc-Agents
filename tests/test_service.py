@@ -166,3 +166,13 @@ def test_set_up_runs_lazily_when_lifespan_is_skipped(
     client.post("/query", json=PLATFORM_BODY)
 
     assert agent.set_up_calls == 1
+
+
+def test_status_mirrors_healthz_for_external_callers() -> None:
+    """Cloud Run's front end swallows /healthz on the public URL, so /status is
+    the endpoint an operator (or an uptime check) can actually reach."""
+    client = TestClient(create_app(agent=StubAgent()))
+    healthz = client.get("/healthz")
+    status = client.get("/status")
+    assert healthz.status_code == status.status_code == 200
+    assert healthz.json() == status.json() == {"status": "ok"}
